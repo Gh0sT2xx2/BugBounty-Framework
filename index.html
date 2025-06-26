@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bug Bounty Framework</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Courier New', monospace;
+            background-color: black;
+            color: #0F0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        #terminal {
+            width: 100%;
+            height: calc(100% - 40px);
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        #command-line {
+            display: flex;
+            align-items: center;
+        }
+        #command-input {
+            background: transparent;
+            border: none;
+            color: #0F0;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            width: 80%;
+            outline: none;
+        }
+        #binary-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.2;
+        }
+        #matrix-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.2;
+            display: none;
+        }
+        #grid-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.2;
+            display: none;
+        }
+        .logo {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: #0F0;
+            font-size: 12px;
+        }
+        .link {
+            color: cyan;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .help-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .help-table th, .help-table td {
+            border: 1px solid #0F0;
+            padding: 5px;
+            text-align: left;
+        }
+        .theme-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #0F0;
+            color: black;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1001;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        .theme-menu {
+            position: absolute;
+            top: 40px;
+            right: 10px;
+            background-color: #222;
+            border: 1px solid #0F0;
+            border-radius: 4px;
+            padding: 10px;
+            z-index: 1001;
+            display: none;
+        }
+        .theme-menu.active {
+            display: block;
+        }
+        .theme-option {
+            padding: 5px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            border-radius: 3px;
+        }
+        .theme-option:hover {
+            background-color: #333;
+        }
+        .bg-button {
+            position: absolute;
+            top: 10px;
+            right: 110px;
+            background-color: #0F0;
+            color: black;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1001;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        .bg-menu {
+            position: absolute;
+            top: 40px;
+            right: 110px;
+            background-color: #222;
+            border: 1px solid #0F0;
+            border-radius: 4px;
+            padding: 10px;
+            z-index: 1001;
+            display: none;
+        }
+        .bg-menu.active {
+            display: block;
+        }
+        .bg-option {
+            padding: 5px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            border-radius: 3px;
+        }
+        .bg-option:hover {
+            background-color: #333;
+        }
+        /* Theme classes */
+        .theme-matrix {
+            background-color: black;
+            color: #0F0;
+        }
+        .theme-blue {
+            background-color: #001133;
+            color: #00AAFF;
+        }
+        .theme-amber {
+            background-color: #211a00;
+            color: #FFBF00;
+        }
+        .theme-purple {
+            background-color: #1A0033;
+            color: #CC66FF;
+        }
+        .theme-red {
+            background-color: #330000;
+            color: #FF3333;
+        }
+    </style>
+</head>
+<body class="theme-matrix">
+    <canvas id="binary-animation"></canvas>
+    <canvas id="matrix-animation"></canvas>
+    <canvas id="grid-animation"></canvas>
+    <div id="terminal"></div>
+    <div class="logo">Bug Bounty Framework by: Diogo Lages</div>
+    
+    <!-- Theme button and menu -->
+    <button class="theme-button" id="theme-button">Themes</button>
+    <div class="theme-menu" id="theme-menu">
+        <div class="theme-option" data-theme="matrix">Matrix (Default)</div>
+        <div class="theme-option" data-theme="blue">Blue Terminal</div>
+        <div class="theme-option" data-theme="amber">Amber Terminal</div>
+        <div class="theme-option" data-theme="purple">Purple Hacker</div>
+        <div class="theme-option" data-theme="red">Red Alert</div>
+    </div>
+    
+    <!-- Background button and menu -->
+    <button class="bg-button" id="bg-button">Background</button>
+    <div class="bg-menu" id="bg-menu">
+        <div class="bg-option" data-bg="binary">Binary Rain</div>
+        <div class="bg-option" data-bg="matrix">Matrix Code</div>
+        <div class="bg-option" data-bg="grid">Cyber Grid</div>
+    </div>
+    
+    <script>
+        const fileSystem = {
+            'Recon': {
+                'Subdomain_Enumeration': {
+                    'Tools': {
+                        'Sublist3r': { 'Sublist3r.txt': 'https://github.com/aboul3la/Sublist3r' },
+                        'Amass': { 'Amass.txt': 'https://github.com/OWASP/Amass' },
+                        'massdns': { 'massdns.txt': 'https://github.com/blechschmidt/massdns' },
+                        'Findomain': { 'Findomain.txt': 'https://github.com/Findomain/Findomain' },
+                        'Sudomy': { 'Sudomy.txt': 'https://github.com/screetsec/Sudomy' },
+                        'chaos-client': { 'chaos-client.txt': 'https://github.com/projectdiscovery/chaos-client' },
+                        'domained': { 'domained.txt': 'https://github.com/caffix/domained' },
+                        'bugcrowd-levelup-subdomain-enumeration': { 'bugcrowd-levelup-subdomain-enumeration.txt': 'https://github.com/appsecco/bugcrowd-levelup-subdomain-enumeration' },
+                        'shuffledns': { 'shuffledns.txt': 'https://github.com/projectdiscovery/shuffledns' },
+                        'puredns': { 'puredns.txt': 'https://github.com/d3mondev/puredns' },
+                        'censys-subdomain-finder': { 'censys-subdomain-finder.txt': 'https://github.com/christophetd/censys-subdomain-finder' },
+                        'Turbolist3r': { 'Turbolist3r.txt': 'https://github.com/fleetcaptain/Turbolist3r' },
+                        'censys-enumeration': { 'censys-enumeration.txt': 'https://github.com/0xbharath/censys-enumeration' },
+                        'tugarecon': { 'tugarecon.txt': 'https://github.com/skynet0x01/tugarecon' },
+                        'as3nt': { 'as3nt.txt': 'https://github.com/Anon-Exploiter/as3nt' },
+                        'Subra': { 'Subra.txt': 'https://github.com/si9int/Subra' },
+                        'Substr3am': { 'Substr3am.txt': 'https://github.com/3nock/substr3am' },
+                        'domain': { 'domain.txt': 'https://github.com/3nock/domain' },
+                        'altdns': { 'altdns.txt': 'https://github.com/infosec-au/altdns' },
+                        'brutesubs': { 'brutesubs.txt': 'https://github.com/anshumanbh/brutesubs' },
+                        'dns-parallel-prober': { 'dns-parallel-prober.txt': 'https://github.com/blechschmidt/dns-parallel-prober' },
+                        'dnscan': { 'dnscan.txt': 'https://github.com/rbsec/dnscan' },
+                        'knock': { 'knock.txt': 'https://github.com/guelfoweb/knock' },
+                        'hakrevdns': { 'hakrevdns.txt': 'https://github.com/hakluke/hakrevdns' },
+                        'dnsx': { 'dnsx.txt': 'https://github.com/projectdiscovery/dnsx' },
+                        'subfinder': { 'subfinder.txt': 'https://github.com/projectdiscovery/subfinder' },
+                        'assetfinder': { 'assetfinder.txt': 'https://github.com/tomnomnom/assetfinder' },
+                        'crtndstry': { 'crtndstry.txt': 'https://github.com/nahamsec/crtndstry' },
+                        'VHostScan': { 'VHostScan.txt': 'https://github.com/codingo/VHostScan' },
+                        'scilla': { 'scilla.txt': 'https://github.com/edoardottt/scilla' },
+                        'sub3suite': { 'sub3suite.txt': 'https://github.com/3nock/sub3suite' },
+                        'cero': { 'cero.txt': 'https://github.com/glebarez/cero' },
+                        'shosubgo': { 'shosubgo.txt': 'https://github.com/incogbyte/shosubgo' },
+                        'haktrails': { 'haktrails.txt': 'https://github.com/hakluke/haktrails' },
+                        'bbot': { 'bbot.txt': 'https://github.com/blacklanternsecurity/bbot' }
+                    }
+                },
+                'Port_Scanning': {
+                    'Tools': {
+                        'masscan': { 'masscan.txt': 'https://github.com/robertdavidgraham/masscan' },
+                        'RustScan': { 'RustScan.txt': 'https://github.com/RustScan/RustScan' },
+                        'naabu': { 'naabu.txt': 'https://github.com/projectdiscovery/naabu' },
+                        'nmap': { 'nmap.txt': 'https://github.com/nmap/nmap' },
+                        'sandmap': { 'sandmap.txt': 'https://github.com/trimstray/sandmap' },
+                        'ScanCannon': { 'ScanCannon.txt': 'https://github.com/johnnyxmas/ScanCannon' }
+                    }
+                },
+                'Screenshots': {
+                    'Tools': {
+                        'EyeWitness': { 'EyeWitness.txt': 'https://github.com/FortyNorthSecurity/EyeWitness' },
+                        'aquatone': { 'aquatone.txt': 'https://github.com/michenriksen/aquatone' },
+                        'screenshoteer': { 'screenshoteer.txt': 'https://github.com/vladocar/screenshoteer' },
+                        'gowitness': { 'gowitness.txt': 'https://github.com/sensepost/gowitness' },
+                        'WitnessMe': { 'WitnessMe.txt': 'https://github.com/byt3bl33d3r/WitnessMe' },
+                        'eyeballer': { 'eyeballer.txt': 'https://github.com/BishopFox/eyeballer' },
+                        'scrying': { 'scrying.txt': 'https://github.com/nccgroup/scrying' },
+                        'Depix': { 'Depix.txt': 'https://github.com/beurtschipper/Depix' },
+                        'httpscreenshot': { 'httpscreenshot.txt': 'https://github.com/breenmachine/httpscreenshot' }
+                    }
+                },
+                'Technologies': {
+                    'Tools': {
+                        'wappalyzer': { 'wappalyzer.txt': 'https://github.com/AliasIO/wappalyzer' },
+                        'webanalyze': { 'webanalyze.txt': 'https://github.com/rverton/webanalyze' },
+                        'python-builtwith': { 'python-builtwith.txt': 'https://github.com/claymation/python-builtwith' },
+                        'whatweb': { 'whatweb.txt': 'https://github.com/urbanadventurer/WhatWeb' },
+                        'retire.js': { 'retire.js.txt': 'https://github.com/RetireJS/retire.js' },
+                        'httpx': { 'httpx.txt': 'https://github.com/projectdiscovery/httpx' },
+                        'fingerprintx': { 'fingerprintx.txt': 'https://github.com/praetorian-inc/fingerprintx' }
+                    }
+                },
+                'Content_Discovery': {
+                    'Tools': {
+                        'gobuster': { 'gobuster.txt': 'https://github.com/OJ/gobuster' },
+                        'recursebuster': { 'recursebuster.txt': 'https://github.com/C-Sto/recursebuster' },
+                        'feroxbuster': { 'feroxbuster.txt': 'https://github.com/epi052/feroxbuster' },
+                        'dirsearch': { 'dirsearch.txt': 'https://github.com/maurosoria/dirsearch' },
+                        'filebuster': { 'filebuster.txt': 'https://github.com/henshin/filebuster' },
+                        'dirstalk': { 'dirstalk.txt': 'https://github.com/stamparm/dirstalk' },
+                        'dirbuster-ng': { 'dirbuster-ng.txt': 'https://github.com/digination/dirbuster-ng' },
+                        'gospider': { 'gospider.txt': 'https://github.com/jaeles-project/gospider' },
+                        'hakrawler': { 'hakrawler.txt': 'https://github.com/hakluke/hakrawler' },
+                        'crawley': { 'crawley.txt': 'https://github.com/0xInfection/crawley' },
+                        'katana': { 'katana.txt': 'https://github.com/projectdiscovery/katana' }
+                    }
+                },
+                'Links': {
+                    'Tools': {
+                        'LinkFinder': { 'LinkFinder.txt': 'https://github.com/GerbenJavado/LinkFinder' },
+                        'JS-Scan': { 'JS-Scan.txt': 'https://github.com/dark-warlord14/JS-Scan' },
+                        'LinksDumper': { 'LinksDumper.txt': 'https://github.com/foospidy/LinksDumper' },
+                        'GoLinkFinder': { 'GoLinkFinder.txt': 'https://github.com/0xsha/GoLinkFinder' },
+                        'BurpJSLinkFinder': { 'BurpJSLinkFinder.txt': 'https://github.com/InitRoot/BurpJSLinkFinder' },
+                        'urlgrab': { 'urlgrab.txt': 'https://github.com/IAmStoxe/urlgrab' },
+                        'waybackurls': { 'waybackurls.txt': 'https://github.com/tomnomnom/waybackurls' },
+                        'gau': { 'gau.txt': 'https://github.com/lc/gau' },
+                        'getJS': { 'getJS.txt': 'https://github.com/003random/getJS' },
+                        'linx': { 'linx.txt': 'https://github.com/riza/linx' },
+                        'waymore': { 'waymore.txt': 'https://github.com/xnl-h4ck3r/waymore' },
+                        'xnLinkFinder': { 'xnLinkFinder.txt': 'https://github.com/xnl-h4ck3r/xnLinkFinder' }
+                    }
+                },
+                'Parameters': {
+                    'Tools': {
+                        'parameth': { 'parameth.txt': 'https://github.com/maK-/parameth' },
+                        'param-miner': { 'param-miner.txt': 'https://github.com/PortSwigger/param-miner' },
+                        'ParamPamPam': { 'ParamPamPam.txt': 'https://github.com/Bo0oM/ParamPamPam' },
+                        'Arjun': { 'Arjun.txt': 'https://github.com/s0md3v/Arjun' },
+                        'ParamSpider': { 'ParamSpider.txt': 'https://github.com/devanshbatham/ParamSpider' },
+                        'x8': { 'x8.txt': 'https://github.com/Sh1Yo/x8' }
+                    }
+                },
+                'Fuzzing': {
+                    'Tools': {
+                        'wfuzz': { 'wfuzz.txt': 'https://github.com/xmendez/wfuzz' },
+                        'ffuf': { 'ffuf.txt': 'https://github.com/ffuf/ffuf' },
+                        'fuzzdb': { 'fuzzdb.txt': 'https://github.com/fuzzdb-project/fuzzdb' },
+                        'IntruderPayloads': { 'IntruderPayloads.txt': 'https://github.com/1N3/IntruderPayloads' },
+                        'fuzz.txt': { 'fuzz.txt.txt': 'https://github.com/Bo0oM/fuzz.txt' },
+                        'fuzzilli': { 'fuzzilli.txt': 'https://github.com/googleprojectzero/fuzzilli' },
+                        'fuzzapi': { 'fuzzapi.txt': 'https://github.com/fuzzapi/fuzzapi' },
+                        'qsfuzz': { 'qsfuzz.txt': 'https://github.com/ameenmaali/qsfuzz' },
+                        'vaf': { 'vaf.txt': 'https://github.com/dwisiswant0/vaf' }
+                    }
+                }
+            },
+            'Exploitation': {
+                'Command_Injection': {
+                    'Tools': {
+                        'commix': { 'commix.txt': 'https://github.com/commixproject/commix' }
+                    }
+                },
+                'CORS_Misconfiguration': {
+                    'Tools': {
+                        'Corsy': { 'Corsy.txt': 'https://github.com/s0md3v/Corsy' },
+                        'CORStest': { 'CORStest.txt': 'https://github.com/RUB-NDS/CORStest' },
+                        'cors-scanner': { 'cors-scanner.txt': 'https://github.com/chenjj/CORScanner' },
+                        'CorsMe': { 'CorsMe.txt': 'https://github.com/Shivangx01b/CorsMe' }
+                    }
+                },
+                'CRLF_Injection': {
+                    'Tools': {
+                        'CRLFsuite': { 'CRLFsuite.txt': 'https://github.com/Nefcore/CRLFsuite' },
+                        'crlfuzz': { 'crlfuzz.txt': 'https://github.com/dwisiswant0/crlfuzz' },
+                        'CRLF-Injection-Scanner': { 'CRLF-Injection-Scanner.txt': 'https://github.com/MichaelStott/CRLF-Injection-Scanner' },
+                        'Injectus': { 'Injectus.txt': 'https://github.com/BountyStrike/Injectus' }
+                    }
+                },
+                'CSRF_Injection': {
+                    'Tools': {
+                        'XSRFProbe': { 'XSRFProbe.txt': 'https://github.com/0xInfection/XSRFProbe' }
+                    }
+                },
+                'Directory_Traversal': {
+                    'Tools': {
+                        'dotdotpwn': { 'dotdotpwn.txt': 'https://github.com/wireghoul/dotdotpwn' },
+                        'FDsploit': { 'FDsploit.txt': 'https://github.com/chrispetrou/FDsploit' },
+                        'off-by-slash': { 'off-by-slash.txt': 'https://github.com/bayotop/off-by-slash' },
+                        'liffier': { 'liffier.txt': 'https://github.com/mzfr/liffier' }
+                    }
+                },
+                'File_Inclusion': {
+                    'Tools': {
+                        'liffy': { 'liffy.txt': 'https://github.com/mzfr/liffy' },
+                        'Burp-LFI-tests': { 'Burp-LFI-tests.txt': 'https://github.com/Team-Firebugs/Burp-LFI-tests' },
+                        'LFI-Enum': { 'LFI-Enum.txt': 'https://github.com/mzfr/LFI-Enum' },
+                        'LFISuite': { 'LFISuite.txt': 'https://github.com/D35m0nd142/LFISuite' },
+                        'LFI-files': { 'LFI-files.txt': 'https://github.com/hussein98d/LFI-files' }
+                    }
+                },
+                'GraphQL_Injection': {
+                    'Tools': {
+                        'inql': { 'inql.txt': 'https://github.com/doyensec/inql' },
+                        'GraphQLmap': { 'GraphQLmap.txt': 'https://github.com/swisskyrepo/GraphQLmap' },
+                        'shapeshifter': { 'shapeshifter.txt': 'https://github.com/szski/shapeshifter' },
+                        'graphql_beautifier': { 'graphql_beautifier.txt': 'https://github.com/beefproject/graphql_beautifier' },
+                        'clairvoyance': { 'clairvoyance.txt': 'https://github.com/nikitastupin/clairvoyance' }
+                    }
+                },
+                'Header_Injection': {
+                    'Tools': {
+                        'headi': { 'headi.txt': 'https://github.com/mlcsec/headi' }
+                    }
+                },
+                'Insecure_Deserialization': {
+                    'Tools': {
+                        'ysoserial': { 'ysoserial.txt': 'https://github.com/frohoff/ysoserial' },
+                        'GadgetProbe': { 'GadgetProbe.txt': 'https://github.com/BishopFox/GadgetProbe' },
+                        'ysoserial.net': { 'ysoserial.net.txt': 'https://github.com/pwntester/ysoserial.net' },
+                        'phpggc': { 'phpggc.txt': 'https://github.com/ambionics/phpggc' }
+                    }
+                },
+                'Insecure_Direct_Object_References': {
+                    'Tools': {
+                        'Autorize': { 'Autorize.txt': 'https://github.com/Quitten/Autorize' }
+                    }
+                },
+                'Open_Redirect': {
+                    'Tools': {
+                        'Oralyzer': { 'Oralyzer.txt': 'https://github.com/r0075h3ll/Oralyzer' },
+                        'Injectus': { 'Injectus.txt': 'https://github.com/BountyStrike/Injectus' },
+                        'dom-red': { 'dom-red.txt': 'https://github.com/GoSecure/dom-red' },
+                        'OpenRedireX': { 'OpenRedireX.txt': 'https://github.com/devanshbatham/OpenRedireX' }
+                    }
+                },
+                'Race_Condition': {
+                    'Tools': {
+                        'razzer': { 'razzer.txt': 'https://github.com/compsec-snu/razzer' },
+                        'racepwn': { 'racepwn.txt': 'https://github.com/racepwn/racepwn' },
+                        'requests-racer': { 'requests-racer.txt': 'https://github.com/requests/requests-racer' },
+                        'turbo-intruder': { 'turbo-intruder.txt': 'https://github.com/PortSwigger/turbo-intruder' },
+                        'race-the-web': { 'race-the-web.txt': 'https://github.com/TheHackerDev/race-the-web' }
+                    }
+                },
+                'Request_Smuggling': {
+                    'Tools': {
+                        'http-request-smuggling': { 'http-request-smuggling.txt': 'https://github.com/defparam/http-request-smuggling' },
+                        'smuggler': { 'smuggler.txt': 'https://github.com/defparam/smuggler' },
+                        'h2csmuggler': { 'h2csmuggler.txt': 'https://github.com/BishopFox/h2csmuggler' },
+                        'tiscripts': { 'tiscripts.txt': 'https://github.com/defparam/tiscripts' }
+                    }
+                },
+                'Server_Side_Request_Forgery': {
+                    'Tools': {
+                        'SSRFmap': { 'SSRFmap.txt': 'https://github.com/swisskyrepo/SSRFmap' },
+                        'Gopherus': { 'Gopherus.txt': 'https://github.com/tarunkant/Gopherus' },
+                        'ground-control': { 'ground-control.txt': 'https://github.com/Orange-Cyberdefense/ground-control' },
+                        'SSRFire': { 'SSRFire.txt': 'https://github.com/micha3lb3n/SSRFire' },
+                        'httprebind': { 'httprebind.txt': 'https://github.com/assetnote/httprebind' },
+                        'ssrf-sheriff': { 'ssrf-sheriff.txt': 'https://github.com/teknogeek/ssrf-sheriff' },
+                        'B-XSSRF': { 'B-XSSRF.txt': 'https://github.com/PortSwigger/B-XSSRF' },
+                        'extended-ssrf-search': { 'extended-ssrf-search.txt': 'https://github.com/assetnote/extended-ssrf-search' },
+                        'gaussrf': { 'gaussrf.txt': 'https://github.com/KathanP19/gaussrf' },
+                        'ssrfDetector': { 'ssrfDetector.txt': 'https://github.com/JacobReynolds/ssrfDetector' },
+                        'grafana-ssrf': { 'grafana-ssrf.txt': 'https://github.com/JonathanGawrik/grafana-ssrf' },
+                        'sentrySSRF': { 'sentrySSRF.txt': 'https://github.com/assetnote/sentrySSRF' },
+                        'lorsrf': { 'lorsrf.txt': 'https://github.com/0xInfection/lorsrf' },
+                        'singularity': { 'singularity.txt': 'https://github.com/nccgroup/singularity' },
+                        'whonow': { 'whonow.txt': 'https://github.com/brannondorsey/whonow' },
+                        'dns-rebind-toolkit': { 'dns-rebind-toolkit.txt': 'https://github.com/brannondorsey/dns-rebind-toolkit' },
+                        'dref': { 'dref.txt': 'https://github.com/0xInfection/dref' },
+                        'rbndr': { 'rbndr.txt': 'https://github.com/taviso/rbndr' },
+                        'dnsFookup': { 'dnsFookup.txt': 'https://github.com/0xInfection/dnsFookup' },
+                        'surf': { 'surf.txt': 'https://github.com/assetnote/surf' }
+                    }
+                },
+                'SQL_Injection': {
+                    'Tools': {
+                        'sqlmap': { 'sqlmap.txt': 'https://github.com/sqlmapproject/sqlmap' },
+                        'NoSQLMap': { 'NoSQLMap.txt': 'https://github.com/codingo/NoSQLMap' },
+                        'SQLiScanner': { 'SQLiScanner.txt': 'https://github.com/0xInfection/SQLiScanner' },
+                        'SleuthQL': { 'SleuthQL.txt': 'https://github.com/RhinoSecurityLabs/SleuthQL' },
+                        'mssqlproxy': { 'mssqlproxy.txt': 'https://github.com/blackarrowsec/mssqlproxy' },
+                        'sqli-hunter': { 'sqli-hunter.txt': 'https://github.com/zt2/sqli-hunter' },
+                        'waybackSqliScanner': { 'waybackSqliScanner.txt': 'https://github.com/ghostlulzhacks/waybackSqliScanner' },
+                        'ESC': { 'ESC.txt': 'https://github.com/NetSPI/ESC' },
+                        'mssqli-duet': { 'mssqli-duet.txt': 'https://github.com/NetSPI/mssqli-duet' },
+                        'burp-to-sqlmap': { 'burp-to-sqlmap.txt': 'https://github.com/PortSwigger/burp-to-sqlmap' },
+                        'BurpSQLTruncSanner': { 'BurpSQLTruncSanner.txt': 'https://github.com/PortSwigger/BurpSQLTruncSanner' },
+                        'andor': { 'andor.txt': 'https://github.com/0xInfection/andor' },
+                        'Blinder': { 'Blinder.txt': 'https://github.com/0xInfection/Blinder' },
+                        'sqliv': { 'sqliv.txt': 'https://github.com/the-robot/sqliv' },
+                        'nosqli': { 'nosqli.txt': 'https://github.com/Charlie-belmer/nosqli' },
+                        'ghauri': { 'ghauri.txt': 'https://github.com/r0oth3x49/ghauri' }
+                    }
+                },
+                'XSS_Injection': {
+                    'Tools': {
+                        'XSStrike': { 'XSStrike.txt': 'https://github.com/s0md3v/XSStrike' },
+                        'xssor2': { 'xssor2.txt': 'https://github.com/UltimateHackers/XSSor' },
+                        'xsscrapy': { 'xsscrapy.txt': 'https://github.com/DanMcInerney/xsscrapy' },
+                        'sleepy-puppy': { 'sleepy-puppy.txt': 'https://github.com/Netflix/sleepy-puppy' },
+                        'ezXSS': { 'ezXSS.txt': 'https://github.com/ssl/ezXSS' },
+                        'xsshunter': { 'xsshunter.txt': 'https://github.com/mandatoryprogrammer/xsshunter' },
+                        'dalfox': { 'dalfox.txt': 'https://github.com/hahwul/dalfox' },
+                        'xsser': { 'xsser.txt': 'https://github.com/epsylon/xsser' },
+                        'XSpear': { 'XSpear.txt': 'https://github.com/hahwul/XSpear' },
+                        'weaponised-XSS-payloads': { 'weaponised-XSS-payloads.txt': 'https://github.com/hakluke/weaponised-XSS-payloads' },
+                        'tracy': { 'tracy.txt': 'https://github.com/nccgroup/tracy' },
+                        'xssValidator': { 'xssValidator.txt': 'https://github.com/PortSwigger/xssValidator' },
+                        'JSShell': { 'JSShell.txt': 'https://github.com/Den1al/JSShell' },
+                        'bXSS': { 'bXSS.txt': 'https://github.com/LewisArdern/bXSS' },
+                        'docem': { 'docem.txt': 'https://github.com/GoSecure/docem' },
+                        'XSS-Radar': { 'XSS-Radar.txt': 'https://github.com/bugbountyforum/XSS-Radar' },
+                        'BruteXSS': { 'BruteXSS.txt': 'https://github.com/ym2011/BruteXSS' },
+                        'findom-xss': { 'findom-xss.txt': 'https://github.com/dwisiswant0/findom-xss' },
+                        'domdig': { 'domdig.txt': 'https://github.com/fcavallarin/domdig' },
+                        'femida': { 'femida.txt': 'https://github.com/wireghoul/femida' },
+                        'domxssscanner': { 'domxssscanner.txt': 'https://github.com/GoSecure/domxssscanner' },
+                        'xsshunter_client': { 'xsshunter_client.txt': 'https://github.com/mandatoryprogrammer/xsshunter_client' },
+                        'extended-xss-search': { 'extended-xss-search.txt': 'https://github.com/GoSecure/extended-xss-search' },
+                        'xssmap': { 'xssmap.txt': 'https://github.com/0xInfection/xssmap' },
+                        'XSSCon': { 'XSSCon.txt': 'https://github.com/0xInfection/XSSCon' },
+                        'BitBlinder': { 'BitBlinder.txt': 'https://github.com/PortSwigger/BitBlinder' },
+                        'XSSOauthPersistence': { 'XSSOauthPersistence.txt': 'https://github.com/0xInfection/XSSOauthPersistence' },
+                        'shadow-workers': { 'shadow-workers.txt': 'https://github.com/0xInfection/shadow-workers' },
+                        'rexsser': { 'rexsser.txt': 'https://github.com/PortSwigger/rexsser' },
+                        'xss-flare': { 'xss-flare.txt': 'https://github.com/0xInfection/xss-flare' },
+                        'Xss-Sql-Fuzz': { 'Xss-Sql-Fuzz.txt': 'https://github.com/0xInfection/Xss-Sql-Fuzz' },
+                        'vaya-ciego-nen': { 'vaya-ciego-nen.txt': 'https://github.com/0xInfection/vaya-ciego-nen' },
+                        'dom-based-xss-finder': { 'dom-based-xss-finder.txt': 'https://github.com/GoSecure/dom-based-xss-finder' },
+                        'XSSTerminal': { 'XSSTerminal.txt': 'https://github.com/0xInfection/XSSTerminal' },
+                        'xss2png': { 'xss2png.txt': 'https://github.com/0xInfection/xss2png' },
+                        'XSSwagger': { 'XSSwagger.txt': 'https://github.com/0xInfection/XSSwagger' }
+                    }
+                },
+                'XXE_Injection': {
+                    'Tools': {
+                        'ground-control': { 'ground-control.txt': 'https://github.com/Orange-Cyberdefense/ground-control' },
+                        'dtd-finder': { 'dtd-finder.txt': 'https://github.com/GoSecure/dtd-finder' },
+                        'docem': { 'docem.txt': 'https://github.com/GoSecure/docem' },
+                        'xxeserv': { 'xxeserv.txt': 'https://github.com/GoSecure/xxeserv' },
+                        'xxexploiter': { 'xxexploiter.txt': 'https://github.com/luisfontes19/xxexploiter' },
+                        'B-XSSRF': { 'B-XSSRF.txt': 'https://github.com/PortSwigger/B-XSSRF' },
+                        'XXEinjector': { 'XXEinjector.txt': 'https://github.com/enjoiz/XXEinjector' },
+                        'oxml_xxe': { 'oxml_xxe.txt': 'https://github.com/BuffaloWill/oxml_xxe' },
+                        'metahttp': { 'metahttp.txt': 'https://github.com/GoSecure/metahttp' }
+                    }
+                },
+                'SSTI_Injection': {
+                    'Tools': {
+                        'tplmap': { 'tplmap.txt': 'https://github.com/epinna/tplmap' },
+                        'SSTImap': { 'SSTImap.txt': 'https://github.com/vladko312/SSTImap' }
+                    }
+                }
+            },
+            'Miscellaneous': {
+                'Passwords': {
+                    'Tools': {
+                        'thc-hydra': { 'thc-hydra.txt': 'https://github.com/vanhauser-thc/thc-hydra' },
+                        'DefaultCreds-cheat-sheet': { 'DefaultCreds-cheat-sheet.txt': 'https://github.com/ihebski/DefaultCreds-cheat-sheet' },
+                        'changeme': { 'changeme.txt': 'https://github.com/ztgrace/changeme' },
+                        'BruteX': { 'BruteX.txt': 'https://github.com/1N3/BruteX' },
+                        'patator': { 'patator.txt': 'https://github.com/lanjelot/patator' }
+                    }
+                },
+                'Secrets': {
+                    'Tools': {
+                        'git-secrets': { 'git-secrets.txt': 'https://github.com/awslabs/git-secrets' },
+                        'gitleaks': { 'gitleaks.txt': 'https://github.com/zricethezav/gitleaks' },
+                        'truffleHog': { 'truffleHog.txt': 'https://github.com/trufflesecurity/truffleHog' },
+                        'gitGraber': { 'gitGraber.txt': 'https://github.com/hisxo/gitGraber' },
+                        'talisman': { 'talisman.txt': 'https://github.com/thoughtworks/talisman' },
+                        'GitGot': { 'GitGot.txt': 'https://github.com/BishopFox/GitGot' },
+                        'git-all-secrets': { 'git-all-secrets.txt': 'https://github.com/anshumanbh/git-all-secrets' },
+                        'github-search': { 'github-search.txt': 'https://github.com/gwen001/github-search' },
+                        'git-vuln-finder': { 'git-vuln-finder.txt': 'https://github.com/cve-search/git-vuln-finder' },
+                        'commit-stream': { 'commit-stream.txt': 'https://github.com/x1sec/commit-stream' },
+                        'gitrob': { 'gitrob.txt': 'https://github.com/michenriksen/gitrob' },
+                        'repo-supervisor': { 'repo-supervisor.txt': 'https://github.com/auth0/repo-supervisor' },
+                        'GitMiner': { 'GitMiner.txt': 'https://github.com/UnkL4b/GitMiner' },
+                        'shhgit': { 'shhgit.txt': 'https://github.com/eth0izzle/shhgit' },
+                        'detect-secrets': { 'detect-secrets.txt': 'https://github.com/Yelp/detect-secrets' },
+                        'rusty-hog': { 'rusty-hog.txt': 'https://github.com/newrelic/rusty-hog' },
+                        'whispers': { 'whispers.txt': 'https://github.com/Syslifters/whispers' },
+                        'yar': { 'yar.txt': 'https://github.com/m4ll0k/yar' },
+                        'dufflebag': { 'dufflebag.txt': 'https://github.com/bishopfox/dufflebag' },
+                        'secret-bridge': { 'secret-bridge.txt': 'https://github.com/Netflix/secret-bridge' },
+                        'earlybird': { 'earlybird.txt': 'https://github.com/americanexpress/earlybird' },
+                        'Trufflehog-Chrome-Extension': { 'Trufflehog-Chrome-Extension.txt': 'https://github.com/trufflesecurity/Trufflehog-Chrome-Extension' },
+                        'noseyparker': { 'noseyparker.txt': 'https://github.com/praetorian-inc/noseyparker' }
+                    }
+                },
+                'Git': {
+                    'Tools': {
+                        'GitTools': { 'GitTools.txt': 'https://github.com/internetwache/GitTools' },
+                        'gitjacker': { 'gitjacker.txt': 'https://github.com/liamg/gitjacker' },
+                        'git-dumper': { 'git-dumper.txt': 'https://github.com/arthaud/git-dumper' },
+                        'GitHunter': { 'GitHunter.txt': 'https://github.com/digininja/GitHunter' },
+                        'dvcs-ripper': { 'dvcs-ripper.txt': 'https://github.com/kost/dvcs-ripper' },
+                        'Gato': { 'Gato.txt': 'https://github.com/pumasecurity/Gato' }
+                    }
+                },
+                'Buckets': {
+                    'Tools': {
+                        'S3Scanner': { 'S3Scanner.txt': 'https://github.com/sa7mon/S3Scanner' },
+                        'AWSBucketDump': { 'AWSBucketDump.txt': 'https://github.com/jordanpotti/AWSBucketDump' },
+                        'CloudScraper': { 'CloudScraper.txt': 'https://github.com/jordanpotti/CloudScraper' },
+                        's3viewer': { 's3viewer.txt': 'https://github.com/SharonBrizinov/s3viewer' },
+                        'festin': { 'festin.txt': 'https://github.com/cr0hn/festin' },
+                        's3reverse': { 's3reverse.txt': 'https://github.com/hahwul/s3reverse' },
+                        'mass-s3-bucket-tester': { 'mass-s3-bucket-tester.txt': 'https://github.com/random-robbie/mass-s3-bucket-tester' },
+                        'S3BucketList': { 'S3BucketList.txt': 'https://github.com/Netflix-Skunkworks/S3BucketList' },
+                        'dirlstr': { 'dirlstr.txt': 'https://github.com/cybercdh/dirlstr' },
+                        'Burp-AnonymousCloud': { 'Burp-AnonymousCloud.txt': 'https://github.com/PortSwigger/Burp-AnonymousCloud' },
+                        'kicks3': { 'kicks3.txt': 'https://github.com/assetnote/kicks3' },
+                        '2tearsinabucket': { '2tearsinabucket.txt': 'https://github.com/assetnote/2tearsinabucket' },
+                        's3_objects_check': { 's3_objects_check.txt': 'https://github.com/sa7mon/s3_objects_check' },
+                        's3tk': { 's3tk.txt': 'https://github.com/ankane/s3tk' },
+                        'CloudBrute': { 'CloudBrute.txt': 'https://github.com/0xsha/CloudBrute' },
+                        's3cario': { 's3cario.txt': 'https://github.com/0xInfection/s3cario' },
+                        'S3Cruze': { 'S3Cruze.txt': 'https://github.com/0xInfection/S3Cruze' }
+                    }
+                },
+                'CMS': {
+                    'Tools': {
+                        'wpscan': { 'wpscan.txt': 'https://github.com/wpscanteam/wpscan' },
+                        'WPSpider': { 'WPSpider.txt': 'https://github.com/0xInfection/WPSpider' },
+                        'wprecon': { 'wprecon.txt': 'https://github.com/0xInfection/wprecon' },
+                        'CMSmap': { 'CMSmap.txt': 'https://github.com/Dionach/CMSmap' },
+                        'joomscan': { 'joomscan.txt': 'https://github.com/rezasp/joomscan' },
+                        'pyfiscan': { 'pyfiscan.txt': 'https://github.com/fgeek/pyfiscan' },
+                        'aemhacker': { 'aemhacker.txt': 'https://github.com/0xInfection/aemhacker' },
+                        'aemscan': { 'aemscan.txt': 'https://github.com/0xInfection/aemscan' }
+                    }
+                },
+                'JSON_Web_Token': {
+                    'Tools': {
+                        'jwt_tool': { 'jwt_tool.txt': 'https://github.com/ticarpi/jwt_tool' },
+                        'c-jwt-cracker': { 'c-jwt-cracker.txt': 'https://github.com/brendan-rius/c-jwt-cracker' },
+                        'jwt-heartbreaker': { 'jwt-heartbreaker.txt': 'https://github.com/ticarpi/jwt-heartbreaker' },
+                        'jwtear': { 'jwtear.txt': 'https://github.com/kernelmachine/jwtear' },
+                        'jwt-key-id-injector': { 'jwt-key-id-injector.txt': 'https://github.com/ticarpi/jwt-key-id-injector' },
+                        'jwt-hack': { 'jwt-hack.txt': 'https://github.com/hahwul/jwt-hack' },
+                        'jwt-cracker': { 'jwt-cracker.txt': 'https://github.com/lmammino/jwt-cracker' }
+                    }
+                },
+                'postMessage': {
+                    'Tools': {
+                        'postMessage-tracker': { 'postMessage-tracker.txt': 'https://github.com/fransr/postMessage-tracker' },
+                        'PostMessage_Fuzz_Tool': { 'PostMessage_Fuzz_Tool.txt': 'https://github.com/0xInfection/PostMessage_Fuzz_Tool' }
+                    }
+                },
+                'Subdomain_Takeover': {
+                    'Tools': {
+                        'subjack': { 'subjack.txt': 'https://github.com/haccer/subjack' },
+                        'SubOver': { 'SubOver.txt': 'https://github.com/Ice3man543/SubOver' },
+                        'autoSubTakeover': { 'autoSubTakeover.txt': 'https://github.com/JordyZomer/autoSubTakeover' },
+                        'NSBrute': { 'NSBrute.txt': 'https://github.com/0xInfection/NSBrute' },
+                        'can-i-take-over-xyz': { 'can-i-take-over-xyz.txt': 'https://github.com/EdOverflow/can-i-take-over-xyz' },
+                        'cnames': { 'cnames.txt': 'https://github.com/0xInfection/cnames' },
+                        'subHijack': { 'subHijack.txt': 'https://github.com/0xInfection/subHijack' },
+                        'tko-subs': { 'tko-subs.txt': 'https://github.com/anshumanbh/tko-subs' },
+                        'HostileSubBruteforcer': { 'HostileSubBruteforcer.txt': 'https://github.com/0xInfection/HostileSubBruteforcer' },
+                        'second-order': { 'second-order.txt': 'https://github.com/m4ll0k/second-order' },
+                        'takeover': { 'takeover.txt': 'https://github.com/m4ll0k/takeover' },
+                        'dnsReaper': { 'dnsReaper.txt': 'https://github.com/punk-security/dnsReaper' }
+                    }
+                },
+                'Vulnerability_Scanners': {
+                    'Tools': {
+                        'nuclei': { 'nuclei.txt': 'https://github.com/projectdiscovery/nuclei' },
+                        'Sn1per': { 'Sn1per.txt': 'https://github.com/1N3/Sn1per' },
+                        'metasploit-framework': { 'metasploit-framework.txt': 'https://github.com/rapid7/metasploit-framework' },
+                        'nikto': { 'nikto.txt': 'https://github.com/sullo/nikto' },
+                        'arachni': { 'arachni.txt': 'https://github.com/Arachni/arachni' },
+                        'jaeles': { 'jaeles.txt': 'https://github.com/jaeles-project/jaeles' },
+                        'retire.js': { 'retire.js.txt': 'https://github.com/RetireJS/retire.js' },
+                        'Osmedeus': { 'Osmedeus.txt': 'https://github.com/j3ssie/Osmedeus' },
+                        'getsploit': { 'getsploit.txt': 'https://github.com/vulnersCom/getsploit' },
+                        'flan': { 'flan.txt': 'https://github.com/cloudflare/flan' },
+                        'Findsploit': { 'Findsploit.txt': 'https://github.com/1N3/Findsploit' },
+                        'BlackWidow': { 'BlackWidow.txt': 'https://github.com/1N3/BlackWidow' },
+                        'backslash-powered-scanner': { 'backslash-powered-scanner.txt': 'https://github.com/PortSwigger/backslash-powered-scanner' },
+                        'Eagle': { 'Eagle.txt': 'https://github.com/BuffaloWill/Eagle' },
+                        'cariddi': { 'cariddi.txt': 'https://github.com/edoardottt/cariddi' },
+                        'OWASP_ZAP': { 'OWASP_ZAP.txt': 'https://github.com/zaproxy/zaproxy' },
+                        'SSTImap': { 'SSTImap.txt': 'https://github.com/vladko312/SSTImap' }
+                    }
+                },
+                'Useful': {
+                    'Tools': {
+                        'anew': { 'anew.txt': 'https://github.com/tomnomnom/anew' },
+                        'gf': { 'gf.txt': 'https://github.com/tomnomnom/gf' },
+                        'uro': { 'uro.txt': 'https://github.com/s0md3v/uro' },
+                        'unfurl': { 'unfurl.txt': 'https://github.com/tomnomnom/unfurl' },
+                        'qsreplace': { 'qsreplace.txt': 'https://github.com/tomnomnom/qsreplace' }
+                    }
+                },
+                'Uncategorized': {
+                    'Tools': {
+                        'JSONBee': { 'JSONBee.txt': 'https://github.com/zigoo0/JSONBee' },
+                        'CyberChef': { 'CyberChef.txt': 'https://github.com/gchq/CyberChef' },
+                        'bountyplz': { 'bountyplz.txt': 'https://github.com/0xInfection/bountyplz' },
+                        'PayloadsAllTheThings': { 'PayloadsAllTheThings.txt': 'https://github.com/swisskyrepo/PayloadsAllTheThings' },
+                        'bounty-targets-data': { 'bounty-targets-data.txt': 'https://github.com/arkadiyt/bounty-targets-data' },
+                        'android-security-awesome': { 'android-security-awesome.txt': 'https://github.com/ashishb/android-security-awesome' },
+                        'awesome-mobile-security': { 'awesome-mobile-security.txt': 'https://github.com/vaib25vicky/awesome-mobile-security' },
+                        'awesome-vulnerable-apps': { 'awesome-vulnerable-apps.txt': 'https://github.com/reddelexc/awesome-vulnerable-apps' },
+                        'XFFenum': { 'XFFenum.txt': 'https://github.com/0xInfection/XFFenum' },
+                        'httpx': { 'httpx.txt': 'https://github.com/projectdiscovery/httpx' },
+                        'csprecon': { 'csprecon.txt': 'https://github.com/0xInfection/csprecon' }
+                    }
+                }
+            }
+        };
+
+        const terminalElement = document.getElementById('terminal');
+        const binaryCanvas = document.getElementById('binary-animation');
+        const matrixCanvas = document.getElementById('matrix-animation');
+        const gridCanvas = document.getElementById('grid-animation');
+        let currentPath = [];
+        let commandHistory = [];
+        let historyIndex = -1;
+        let activeBackground = 'binary';
+
+        // Theme selector functionality
+        const themeButton = document.getElementById('theme-button');
+        const themeMenu = document.getElementById('theme-menu');
+        const themeOptions = document.querySelectorAll('.theme-option');
+        
+        themeButton.addEventListener('click', () => {
+            themeMenu.classList.toggle('active');
+            bgMenu.classList.remove('active');
+        });
+        
+        themeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const theme = option.getAttribute('data-theme');
+                document.body.className = `theme-${theme}`;
+                themeMenu.classList.remove('active');
+                
+                // Update canvas color based on theme
+                updateCanvasColor();
+            });
+        });
+        
+        // Background selector functionality
+        const bgButton = document.getElementById('bg-button');
+        const bgMenu = document.getElementById('bg-menu');
+        const bgOptions = document.querySelectorAll('.bg-option');
+        
+        bgButton.addEventListener('click', () => {
+            bgMenu.classList.toggle('active');
+            themeMenu.classList.remove('active');
+        });
+        
+        bgOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const bgType = option.getAttribute('data-bg');
+                
+                // Hide all backgrounds
+                binaryCanvas.style.display = 'none';
+                matrixCanvas.style.display = 'none';
+                gridCanvas.style.display = 'none';
+                
+                // Show selected background
+                if (bgType === 'binary') {
+                    binaryCanvas.style.display = 'block';
+                    activeBackground = 'binary';
+                } else if (bgType === 'matrix') {
+                    matrixCanvas.style.display = 'block';
+                    activeBackground = 'matrix';
+                    if (!matrixInitialized) {
+                        setupMatrixEffect();
+                        matrixInitialized = true;
+                    }
+                } else if (bgType === 'grid') {
+                    gridCanvas.style.display = 'block';
+                    activeBackground = 'grid';
+                    if (!gridInitialized) {
+                        setupGridEffect();
+                        gridInitialized = true;
+                    }
+                }
+                
+                bgMenu.classList.remove('active');
+            });
+        });
+        
+        // Close the menus when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!themeButton.contains(event.target) && !themeMenu.contains(event.target)) {
+                themeMenu.classList.remove('active');
+            }
+            if (!bgButton.contains(event.target) && !bgMenu.contains(event.target)) {
+                bgMenu.classList.remove('active');
+            }
+        });
+        
+        function updateCanvasColor() {
+            // Get the current text color of the body and apply it to the canvas
+            const computedStyle = window.getComputedStyle(document.body);
+            const textColor = computedStyle.color;
+            // Will be used in the animations
+        }
+
+        function writeToTerminal(text, isCommand = false, isSpecial = false) {
+            const lineElement = document.createElement('div');
+            lineElement.innerHTML = isCommand 
+                ? `<span style="color: yellow;">&gt;</span> ${text}` 
+                : (isSpecial 
+                    ? `<span style="color: magenta;">${text}</span>` 
+                    : text);
+            terminalElement.appendChild(lineElement);
+            terminalElement.scrollTop = terminalElement.scrollHeight;
+        }
+
+        function findFiles(pattern, currentDir = fileSystem, basePath = []) {
+            let results = [];
+            
+            // Process the pattern for wildcards
+            let regex;
+            if (pattern.includes('*')) {
+                // Convert glob pattern to regex
+                // Escape regex special chars except *
+                const escapedPattern = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+                // Replace * with regex .* (any characters)
+                const regexPattern = escapedPattern.replace(/\*/g, '.*');
+                // Create case-insensitive regex
+                regex = new RegExp(`^${regexPattern}$`, 'i');
+            } else {
+                // Simple case-insensitive match
+                regex = new RegExp(pattern, 'i');
+            }
+            
+            function search(dir, path) {
+                for (let [key, value] of Object.entries(dir)) {
+                    let newPath = [...path, key];
+                    
+                    if (regex.test(key)) {
+                        results.push({
+                            path: newPath.join('/'),
+                            type: typeof value === 'object' && !value.hasOwnProperty('txt') ? 'directory' : 'file'
+                        });
+                    }
+                    
+                    if (typeof value === 'object') {
+                        search(value, newPath);
+                    }
+                }
+            }
+            
+            search(currentDir, basePath);
+            return results;
+        }
+
+        function executeCommand(command) {
+            const [cmd, ...args] = command.trim().split(' ');
+            
+            // Add command to history
+            if (command.trim()) {
+                commandHistory.push(command.trim());
+                historyIndex = commandHistory.length;
+            }
+            
+            switch(cmd) {
+                case 'ls':
+                    listDirectory();
+                    break;
+                case 'cd':
+                    changeDirectory(args[0]);
+                    break;
+                case 'cat':
+                    readFile(args[0]);
+                    break;
+                case 'pwd':
+                    writeToTerminal('/' + currentPath.join('/'));
+                    break;
+                case 'find':
+                    if (args[0] === '-name' && args[1]) {
+                        // Extract the pattern and remove quotes
+                        const pattern = args[1].replace(/^["'](.*)["']$/, '$1');
+                        const results = findFiles(pattern);
+                        
+                        if (results.length) {
+                            writeToTerminal(`Found ${results.length} result(s):`, false, true);
+                            results.forEach(result => {
+                                writeToTerminal(`${result.type}: ${result.path}`, false, true);
+                            });
+                        } else {
+                            writeToTerminal('No files found.', false, true);
+                        }
+                    } else {
+                        writeToTerminal('Usage: find -name "pattern"');
+                        writeToTerminal('  Use * as wildcard. Example: find -name "T*"');
+                    }
+                    break;
+                case 'help':
+                    displayHelp();
+                    break;
+                case 'clear':
+                    terminalElement.innerHTML = '';
+                    break;
+                default:
+                    writeToTerminal(`Command not found: ${cmd}`);
+            }
+        }
+
+        function displayHelp() {
+            const helpTable = document.createElement('table');
+            helpTable.className = 'help-table';
+            helpTable.innerHTML = `
+                <tr>
+                    <th>Command</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td>ls</td>
+                    <td>List contents of current directory</td>
+                </tr>
+                <tr>
+                    <td>cd [directory]</td>
+                    <td>Change current directory. Examples: cd dir, cd path/to/dir, cd .., cd /</td>
+                </tr>
+                <tr>
+                    <td>cat [file]</td>
+                    <td>View contents of a file</td>
+                </tr>
+                <tr>
+                    <td>pwd</td>
+                    <td>Print current working directory</td>
+                </tr>
+                <tr>
+                    <td>find -name "pattern"</td>
+                    <td>Search for files/directories that match pattern (case-insensitive, supports * wildcard)</td>
+                </tr>
+                <tr>
+                    <td>help</td>
+                    <td>Display this help menu</td>
+                </tr>
+                <tr>
+                    <td>clear</td>
+                    <td>Clear the terminal screen</td>
+                </tr>
+            `;
+            
+            const helpTitle = document.createElement('div');
+            helpTitle.innerHTML = '<h3>Available Commands:</h3>';
+            
+            terminalElement.appendChild(helpTitle);
+            terminalElement.appendChild(helpTable);
+        }
+
+        function listDirectory() {
+            let currentDir = fileSystem;
+            for (let folder of currentPath) {
+                currentDir = currentDir[folder];
+            }
+
+            Object.keys(currentDir).forEach(item => {
+                writeToTerminal(
+                    typeof currentDir[item] === 'object' 
+                        ? `<span style="color: cyan;">${item}/</span>` 
+                        : item
+                );
+            });
+        }
+
+        function changeDirectory(dir) {
+            // Handle root directory
+            if (dir === '/') {
+                currentPath = [];
+                return;
+            }
+            
+            // Handle parent directory
+            if (dir === '..') {
+                currentPath.pop();
+                return;
+            }
+            
+            // Handle full path navigation
+            if (dir && dir.includes('/')) {
+                const parts = dir.split('/').filter(p => p);
+                
+                // If the path starts with '/', reset to root first
+                if (dir.startsWith('/')) {
+                    currentPath = [];
+                }
+                
+                // Try to navigate through each part of the path
+                let tempPath = [...currentPath];
+                let validPath = true;
+                let currentDir = fileSystem;
+                
+                // Navigate through the existing tempPath
+                for (let folder of tempPath) {
+                    if (!currentDir[folder]) {
+                        validPath = false;
+                        break;
+                    }
+                    currentDir = currentDir[folder];
+                }
+                
+                // Navigate through the new path parts
+                if (validPath) {
+                    for (let part of parts) {
+                        if (currentDir[part] && typeof currentDir[part] === 'object') {
+                            tempPath.push(part);
+                            currentDir = currentDir[part];
+                        } else {
+                            validPath = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (validPath) {
+                    currentPath = tempPath;
+                } else {
+                    writeToTerminal(`Directory not found: ${dir}`);
+                }
+                
+                return;
+            }
+            
+            // Handle single directory
+            let currentDir = fileSystem;
+            for (let folder of currentPath) {
+                currentDir = currentDir[folder];
+            }
+
+            if (currentDir[dir] && typeof currentDir[dir] === 'object') {
+                currentPath.push(dir);
+            } else {
+                writeToTerminal(`Directory not found: ${dir}`);
+            }
+        }
+
+        function readFile(filePath) {
+            // If the file path contains '/', treat it as a full path
+            if (filePath && filePath.includes('/')) {
+                const parts = filePath.split('/').filter(p => p);
+                const fileName = parts.pop(); // Last part is the file name
+                
+                // Start from root or current directory
+                let tempPath = filePath.startsWith('/') ? [] : [...currentPath];
+                let currentDir = fileSystem;
+                
+                // Navigate through the path
+                for (let folder of tempPath) {
+                    if (!currentDir[folder]) {
+                        writeToTerminal(`Path not found: ${filePath}`);
+                        return;
+                    }
+                    currentDir = currentDir[folder];
+                }
+                
+                // Navigate through the parts in the file path
+                for (let part of parts) {
+                    if (currentDir[part] && typeof currentDir[part] === 'object') {
+                        currentDir = currentDir[part];
+                    } else {
+                        writeToTerminal(`Path not found: ${filePath}`);
+                        return;
+                    }
+                }
+                
+                // Now check for the file
+                if (currentDir[fileName]) {
+                    const content = currentDir[fileName];
+                    writeToTerminal(typeof content === 'string' 
+                        ? `<span class="link" onclick="window.open('${content}', '_blank')">${content}</span>` 
+                        : 'File content unavailable');
+                } else {
+                    writeToTerminal(`File not found: ${fileName}`);
+                }
+            } else {
+                // Regular file in current directory
+                let currentDir = fileSystem;
+                for (let folder of currentPath) {
+                    currentDir = currentDir[folder];
+                }
+
+                if (currentDir[filePath]) {
+                    const content = currentDir[filePath];
+                    writeToTerminal(typeof content === 'string' 
+                        ? `<span class="link" onclick="window.open('${content}', '_blank')">${content}</span>` 
+                        : 'File content unavailable');
+                } else {
+                    writeToTerminal(`File not found: ${filePath}`);
+                }
+            }
+        }
+
+        function createCommandLine() {
+            const commandLine = document.createElement('div');
+            commandLine.id = 'command-line';
+            
+            const prompt = document.createElement('span');
+            prompt.textContent = `root@bugbounty:/${currentPath.join('/')}$ `;
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = 'command-input';
+            input.autocomplete = 'off';
+            
+            // Tab completion
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const currentInput = input.value.trim();
+                    const [cmd, ...args] = currentInput.split(' ');
+                    
+                    // Get current directory contents
+                    let currentDir = fileSystem;
+                    for (let folder of currentPath) {
+                        currentDir = currentDir[folder];
+                    }
+                    
+                    const dirContents = Object.keys(currentDir);
+                    const matchingItems = dirContents.filter(item => 
+                        item.toLowerCase().startsWith(args[0]?.toLowerCase() || '')
+                    );
+                    
+                    if (matchingItems.length === 1) {
+                        input.value = `${cmd} ${matchingItems[0]}`;
+                    } else if (matchingItems.length > 1) {
+                        // Show all matching completions
+                        writeToTerminal('Possible completions:');
+                        matchingItems.forEach(item => {
+                            writeToTerminal(item);
+                        });
+                    }
+                }
+                
+                // Command history navigation
+                if (e.key === 'ArrowUp') {
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        input.value = commandHistory[historyIndex];
+                    }
+                }
+                
+                if (e.key === 'ArrowDown') {
+                    if (historyIndex < commandHistory.length - 1) {
+                        historyIndex++;
+                        input.value = commandHistory[historyIndex];
+                    } else {
+                        input.value = '';
+                        historyIndex = commandHistory.length;
+                    }
+                }
+            });
+            
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const command = input.value;
+                    writeToTerminal(prompt.textContent + command, true);
+                    executeCommand(command);
+                    input.value = '';
+                    createCommandLine();
+                }
+            });
+
+            commandLine.appendChild(prompt);
+            commandLine.appendChild(input);
+            terminalElement.appendChild(commandLine);
+            input.focus();
+        }
+
+        // Binary rain animation
+        let binaryInitialized = true;
+        function setupBinaryRain() {
+            const ctx = binaryCanvas.getContext('2d');
+            binaryCanvas.width = window.innerWidth;
+            binaryCanvas.height = window.innerHeight;
+
+            const columns = binaryCanvas.width / 10;
+            const drops = [];
+
+            for (let i = 0; i < columns; i++) {
+                drops[i] = 1;
+            }
+
+            function drawBinaryRain() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, binaryCanvas.width, binaryCanvas.height);
+                
+                // Get the current text color based on the active theme
+                const computedStyle = window.getComputedStyle(document.body);
+                ctx.fillStyle = computedStyle.color;
+                ctx.font = '10px Arial';
+                
+                for (let i = 0; i < drops.length; i++) {
+                    const text = Math.random() > 0.5 ? '0' : '1';
+                    ctx.fillText(text, i * 10, drops[i] * 10);
+                    
+                    if (drops[i] * 10 > binaryCanvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    
+                    drops[i]++;
+                }
+            }
+
+            setInterval(drawBinaryRain, 50);
+        }
+        
+        // Matrix code animation
+        let matrixInitialized = false;
+        function setupMatrixEffect() {
+            const canvas = matrixCanvas;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Characters to be used in the Matrix
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*()_+~{}[]|:<>?';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            
+            // Array to store droplet position for each column
+            const drops = [];
+            for (let i = 0; i < columns; i++) {
+                drops[i] = Math.floor(Math.random() * canvas.height/fontSize) * -1;
+            }
+            
+            function drawMatrix() {
+                // Semi-transparent black to create the fade effect
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Get the current text color based on the active theme
+                const computedStyle = window.getComputedStyle(document.body);
+                ctx.fillStyle = computedStyle.color;
+                ctx.font = fontSize + 'px monospace';
+                
+                // Render the characters
+                for (let i = 0; i < drops.length; i++) {
+                    // Pick a random character
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    
+                    // Draw the character
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    
+                    // Reset if drop reached bottom or randomly
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.98) {
+                        drops[i] = 0;
+                    }
+                    
+                    // Move the drop down
+                    drops[i]++;
+                }
+            }
+            
+            setInterval(drawMatrix, 50);
+        }
+        
+        // Cyber grid animation
+        let gridInitialized = false;
+        function setupGridEffect() {
+            const canvas = gridCanvas;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Grid properties
+            const gridSize = 30;
+            const lineWidth = 1;
+            
+            function drawGrid() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Get the current text color based on the active theme
+                const computedStyle = window.getComputedStyle(document.body);
+                const textColor = computedStyle.color;
+                
+                // Draw horizontal lines
+                for (let y = 0; y < canvas.height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.strokeStyle = textColor;
+                    ctx.globalAlpha = 0.3 + Math.random() * 0.2;
+                    ctx.lineWidth = lineWidth;
+                    ctx.stroke();
+                }
+                
+                // Draw vertical lines
+                for (let x = 0; x < canvas.width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.strokeStyle = textColor;
+                    ctx.globalAlpha = 0.3 + Math.random() * 0.2;
+                    ctx.lineWidth = lineWidth;
+                    ctx.stroke();
+                }
+                
+                // Draw random data nodes at grid intersections
+                for (let x = 0; x < canvas.width; x += gridSize) {
+                    for (let y = 0; y < canvas.height; y += gridSize) {
+                        if (Math.random() > 0.992) {
+                            ctx.beginPath();
+                            ctx.arc(x, y, 3, 0, Math.PI * 2);
+                            ctx.fillStyle = textColor;
+                            ctx.globalAlpha = 0.7;
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+            
+            setInterval(drawGrid, 100);
+        }
+
+        // Initialize terminal
+        createCommandLine();
+        setupBinaryRain();
+        writeToTerminal('Welcome to Bug Bounty Framework');
+        writeToTerminal('Type "help" to see available commands');
+    </script>
+</body>
+</html>
